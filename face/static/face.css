@@ -1,0 +1,517 @@
+/* Vato's face — visual source of truth: face/reference/*.jpeg.
+   Full-bleed solid color, two glossy oval eyes with a white highlight dot,
+   huge mouth with visible teeth. No window chrome, no cursor: the TV IS
+   the face.
+
+   M2: full expression set (working flip + back panel, sleeping), kid-effect
+   accessories, weather wardrobe overlays, amplitude-driven talking mouth. */
+
+:root {
+  --face-color: #e8483f;
+  --ink: #14161c;            /* eyes + mouth outline */
+  --teeth: #ffffff;
+  --mouth-cavity: #5d1313;
+  --back-bg: #1b1e27;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: none;
+  background: var(--face-color);
+  transition: background 1.2s ease;
+}
+
+/* hue cycle for party/rainbow effects (JS toggles .color-cycle) */
+body.color-cycle { animation: hue-cycle 6s linear infinite; }
+@keyframes hue-cycle {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+
+/* ── The flip card: front face / back panel ──────────────────────────── */
+
+#card {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform .9s cubic-bezier(.55, 0, .25, 1);
+}
+body.state-working #card { transform: rotateY(180deg); }
+
+#front, #back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+#back { transform: rotateY(180deg); background: var(--back-bg); }
+
+#face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7vh;
+  animation: breathe 5s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+
+/* ── Eyes ─────────────────────────────────────────────────────────────── */
+
+.eyes {
+  position: relative;
+  display: flex;
+  gap: 16vw;
+}
+
+.eye {
+  position: relative;
+  width: 11vw;
+  height: 17vh;
+  background: var(--ink);
+  border-radius: 50%;
+  transition: transform .35s ease, height .35s ease, border-radius .35s ease;
+}
+
+.eye .shine {
+  position: absolute;
+  top: 14%;
+  left: 18%;
+  width: 34%;
+  height: 26%;
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* blink: JS toggles .blink on body briefly */
+body.blink .eye { transform: scaleY(0.08); }
+
+/* X-eyes bars for the muted state (hidden otherwise) */
+.eye::before, .eye::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -8%;
+  width: 116%;
+  height: 14%;
+  background: var(--face-color);
+  border-radius: 1vh;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.eye::before { transform: translateY(-50%) rotate(45deg); }
+.eye::after  { transform: translateY(-50%) rotate(-45deg); }
+
+/* heart-eyes effect: a CSS heart hidden inside each eye */
+.eye .heart {
+  position: absolute;
+  inset: 12% 8%;
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+.eye .heart::before, .eye .heart::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 52%;
+  height: 80%;
+  background: #ff3b6b;
+  border-radius: 50% 50% 0 0;
+}
+.eye .heart::before { left: 4%;  transform: rotate(-42deg); transform-origin: 100% 100%; }
+.eye .heart::after  { right: 4%; transform: rotate(42deg);  transform-origin: 0 100%; }
+body.fx-heart-eyes .eye .heart { opacity: 1; animation: heart-throb 1s ease-in-out infinite; }
+body.fx-heart-eyes .eye .shine { opacity: 0; }
+@keyframes heart-throb {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
+/* silly: cross-eyes */
+body.fx-silly .eye-left  { transform: translate(3vw, 1.5vh) rotate(18deg); }
+body.fx-silly .eye-right { transform: translate(-3vw, -1vh) rotate(-14deg); }
+
+/* spooky: heavy lids, wobble */
+body.fx-spooky .eye { border-radius: 0 0 50% 50% / 0 0 100% 100%; height: 11vh; }
+body.fx-spooky #face { animation: spooky-drift 4s ease-in-out infinite; }
+@keyframes spooky-drift {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-2vh) scale(1.01); }
+}
+
+/* ── Cheeks (frost wardrobe: rosy cheeks) ─────────────────────────────── */
+
+.cheeks {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 14vw;
+  margin-top: -6vh;
+  pointer-events: none;
+}
+.cheek {
+  width: 7vw;
+  height: 7vh;
+  background: #ff8e8e;
+  border-radius: 50%;
+  opacity: 0;
+  filter: blur(1.2vmin);
+  transition: opacity .8s ease;
+}
+body.wear-frost .cheek { opacity: .85; }
+
+/* ── Mouth ────────────────────────────────────────────────────────────── */
+
+.mouth {
+  position: relative;
+  width: 42vw;
+  height: 22vh;
+  transition: width .4s ease, height .4s ease, transform .4s ease;
+  transform-origin: top center;   /* amplitude sync scales the jaw down from the top lip */
+}
+
+.mouth-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--mouth-cavity);
+  border: 1.6vh solid var(--ink);
+  border-radius: 12% 12% 50% 50% / 14% 14% 100% 100%;
+  overflow: hidden;
+  transition: border-radius .4s ease;
+}
+
+.teeth {
+  width: 100%;
+  height: 42%;
+  background: var(--teeth);
+  border-bottom: 0.9vh solid var(--ink);
+  transition: height .4s ease;
+}
+
+/* the little tongue resting in the mouth (reference face2) */
+.inner-tongue {
+  position: absolute;
+  bottom: -28%;
+  left: 30%;
+  width: 40%;
+  height: 60%;
+  background: #ff7b9c;
+  border: 1.2vh solid var(--ink);
+  border-radius: 50%;
+}
+
+/* tongue hangs out over the lower lip (silly face); hidden by default */
+.tongue {
+  position: absolute;
+  bottom: -28%;
+  left: 32%;
+  width: 36%;
+  height: 65%;
+  background: #ff7b9c;
+  border: 1.2vh solid var(--ink);
+  border-radius: 30% 30% 50% 50% / 12% 12% 100% 100%;
+  opacity: 0;
+  transform: translateY(-40%) scaleY(.4);
+  transform-origin: top center;
+  transition: opacity .3s ease, transform .4s ease;
+}
+body.acc-tongue .tongue { opacity: 1; transform: none; }
+
+/* ── Accessories (kid effects + wardrobe) ─────────────────────────────── */
+
+.acc {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .5s ease, transform .5s ease;
+}
+
+#party-hat, #knit-hat, #nightcap {
+  top: -2vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26vw;
+  height: 30vh;
+}
+#nightcap { width: 32vw; transform: translateX(-58%); }
+body.acc-party-hat #party-hat { opacity: 1; }
+body.wear-knit-hat #knit-hat  { opacity: 1; }
+body.wear-nightcap #nightcap  { opacity: 1; }
+
+#umbrella {
+  top: -6vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56vw;
+  height: 42vh;
+}
+body.wear-umbrella #umbrella { opacity: 1; animation: umbrella-bob 3s ease-in-out infinite; }
+@keyframes umbrella-bob {
+  0%, 100% { margin-top: 0; }
+  50%      { margin-top: 1.2vh; }
+}
+
+#sunglasses {
+  top: -16%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44vw;
+  height: 26vh;
+}
+body.wear-sunglasses #sunglasses { opacity: 1; }
+body.wear-sunglasses .eye, body.wear-sunglasses .eye .shine { opacity: 0; }
+
+#mustache {
+  top: 58%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26vw;
+  height: 9vh;
+}
+body.acc-mustache #mustache { opacity: 1; }
+
+/* frost creeping in from the screen edge (below freezing) */
+#frost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 14vh;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+body.wear-frost #frost { opacity: 1; }
+
+/* ── Particles (confetti, hearts, rain, snow) — JS spawns .particle ───── */
+
+#particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 6;
+}
+.particle {
+  position: absolute;
+  top: -6vh;
+  animation: fall linear forwards;
+}
+@keyframes fall {
+  to { transform: translateY(115vh) rotate(540deg); }
+}
+.particle.confetti { width: 1.4vmin; height: 2.6vmin; }
+.particle.heart    { font-size: 4vmin; color: #ff3b6b; }
+.particle.snow     { font-size: 3vmin; color: #ffffff; }
+.particle.drop {
+  width: .7vmin;
+  height: 5vmin;
+  background: rgba(225, 242, 255, .9);
+  border-radius: 1vmin;
+}
+.particle.drop { animation-name: fall-straight; }
+@keyframes fall-straight {
+  to { transform: translateY(115vh); }
+}
+
+/* ── Listening ring ───────────────────────────────────────────────────── */
+
+#listen-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 72vmin;
+  height: 72vmin;
+  margin: -36vmin 0 0 -36vmin;
+  border: 1vmin solid rgba(255, 255, 255, .65);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── States ───────────────────────────────────────────────────────────── */
+
+/* listening: eyes widen, ring pulses */
+body.state-listening .eye { height: 21vh; transform: scaleX(1.08); }
+body.state-listening .mouth { height: 12vh; width: 30vw; }
+body.state-listening .mouth-inner { border-radius: 50% / 60%; }
+body.state-listening .teeth { height: 0; }
+body.state-listening #listen-ring {
+  opacity: 1;
+  animation: ring-pulse 1.4s ease-out infinite;
+}
+@keyframes ring-pulse {
+  0%   { transform: scale(.92); opacity: .85; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+
+/* thinking: eyes drift up and aside, small "hmm" mouth */
+body.state-thinking .eye { transform: translate(2.4vw, -3.5vh); }
+body.state-thinking .mouth { width: 14vw; height: 4.5vh; transform: translateX(4vw); }
+body.state-thinking .mouth-inner { border-radius: 5vh; }
+body.state-thinking .teeth { height: 0; }
+
+/* talking: amplitude-driven jaw (face.js sets --jaw from the TTS envelope);
+   falls back to a loop when no envelope arrived */
+body.state-talking .mouth {
+  transition: none;
+  transform: scaleY(var(--jaw, 1));
+}
+body.state-talking.no-envelope .mouth { animation: jaw .28s ease-in-out infinite alternate; }
+@keyframes jaw {
+  from { transform: scaleY(.45); }
+  to   { transform: scaleY(1); }
+}
+
+/* sleeping: droopy lids, "z z z", dimmed (spec §9 quiet hours) */
+#zzz {
+  position: absolute;
+  top: 14vh;
+  right: 14vw;
+  font: bold 7vmin "Comic Sans MS", "Chalkboard SE", cursive;
+  color: rgba(255, 255, 255, .85);
+  letter-spacing: 1.4vmin;
+  opacity: 0;
+  transition: opacity .8s ease;
+}
+body.state-sleeping { filter: brightness(.55) saturate(.7); }
+body.state-sleeping .eye { height: 3.5vh; border-radius: 0 0 50% 50% / 0 0 100% 100%; }
+body.state-sleeping .eye .shine { opacity: 0; }
+body.state-sleeping .mouth { width: 18vw; height: 5vh; }
+body.state-sleeping .mouth-inner { border-radius: 5vh; }
+body.state-sleeping .teeth { height: 0; }
+body.state-sleeping #face { animation: breathe 8s ease-in-out infinite; }
+body.state-sleeping #zzz {
+  opacity: 1;
+  animation: zzz-float 3.5s ease-in-out infinite;
+}
+@keyframes zzz-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2.5vh); }
+}
+
+/* muted: X-eyes, flat mouth, desaturated */
+body.state-muted { filter: saturate(.45) brightness(.85); }
+body.state-muted .eye { background: transparent; }
+body.state-muted .eye .shine { opacity: 0; }
+body.state-muted .eye::before, body.state-muted .eye::after {
+  opacity: 1;
+  background: var(--ink);
+}
+body.state-muted .mouth { width: 22vw; height: 3.5vh; }
+body.state-muted .mouth-inner { border-radius: 3vh; }
+body.state-muted .teeth { height: 0; }
+
+/* error: brief dizzy eyes */
+body.state-error .eye { animation: dizzy .5s linear infinite; }
+@keyframes dizzy {
+  from { transform: rotate(0deg) scale(.9); }
+  to   { transform: rotate(360deg) scale(.9); }
+}
+body.state-error .mouth { width: 18vw; height: 6vh; transform: rotate(-4deg); }
+body.state-error .teeth { height: 0; }
+
+/* ── Back panel: the engine room ──────────────────────────────────────── */
+
+#gears {
+  position: absolute;
+  top: 8vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60vmin;
+  height: 44vmin;
+}
+.gear { position: absolute; }
+.gear-big {
+  width: 34vmin;
+  height: 34vmin;
+  left: 0;
+  top: 2vmin;
+  animation: spin 7s linear infinite;
+}
+.gear-small {
+  width: 22vmin;
+  height: 22vmin;
+  right: 2vmin;
+  top: 16vmin;
+  animation: spin 4.6s linear infinite reverse;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#leds {
+  position: absolute;
+  top: 56vh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2.4vmin;
+}
+.led {
+  width: 2.2vmin;
+  height: 2.2vmin;
+  border-radius: 50%;
+  background: #2c3344;
+  animation: led-blink 1.8s steps(1) infinite;
+}
+.led:nth-child(odd)  { --led-on: #59f2a6; }
+.led:nth-child(even) { --led-on: #ffb13b; }
+.led:nth-child(3n)   { --led-on: #ff5d5d; }
+.led:nth-child(1) { animation-delay: 0s; }
+.led:nth-child(2) { animation-delay: .35s; }
+.led:nth-child(3) { animation-delay: .9s; }
+.led:nth-child(4) { animation-delay: .15s; }
+.led:nth-child(5) { animation-delay: 1.2s; }
+.led:nth-child(6) { animation-delay: .6s; }
+.led:nth-child(7) { animation-delay: 1.5s; }
+.led:nth-child(8) { animation-delay: .45s; }
+@keyframes led-blink {
+  0%, 60% { background: var(--led-on, #59f2a6); box-shadow: 0 0 1.6vmin var(--led-on, #59f2a6); }
+  60.01%, 100% { background: #2c3344; box-shadow: none; }
+}
+
+#back-label {
+  position: absolute;
+  top: 62vh;
+  width: 100%;
+  text-align: center;
+  font: 600 2.4vmin "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: .8vmin;
+  color: #5a6478;
+}
+
+#ticker {
+  position: absolute;
+  bottom: 4vh;
+  left: 8vw;
+  right: 8vw;
+  height: 22vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  font: 3vmin "Menlo", "Courier New", monospace;
+  color: #8fe6b0;
+  text-shadow: 0 0 1vmin rgba(143, 230, 176, .5);
+}
+#ticker .line { opacity: .45; padding: .4vh 0; white-space: nowrap; }
+#ticker .line:last-child { opacity: 1; animation: ticker-in .4s ease; }
+#ticker .line:last-child::before { content: "▸ "; }
+@keyframes ticker-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}

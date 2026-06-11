@@ -1,0 +1,6 @@
+{
+  "name": "mustache",
+  "description": "A splendid handlebar mustache",
+  "body_classes": ["acc-mustache"],
+  "duration_s": 300
+}

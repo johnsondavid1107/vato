@@ -1,0 +1,8 @@
+{
+  "name": "party",
+  "description": "Party face: party hat, confetti, colour cycle",
+  "body_classes": ["acc-party-hat"],
+  "color_cycle": true,
+  "particles": "confetti",
+  "duration_s": 300
+}

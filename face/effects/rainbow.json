@@ -1,0 +1,7 @@
+{
+  "name": "rainbow",
+  "description": "Rainbow mode: the whole face cycles through colours",
+  "body_classes": [],
+  "color_cycle": true,
+  "duration_s": 300
+}

@@ -1,0 +1,7 @@
+{
+  "name": "heart_eyes",
+  "description": "Heart-shaped eyes, floating hearts",
+  "body_classes": ["fx-heart-eyes"],
+  "particles": "hearts",
+  "duration_s": 300
+}

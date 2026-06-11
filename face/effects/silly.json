@@ -1,0 +1,6 @@
+{
+  "name": "silly",
+  "description": "Silly face: cross-eyes, tongue out",
+  "body_classes": ["fx-silly", "acc-tongue"],
+  "duration_s": 300
+}

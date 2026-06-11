@@ -1,0 +1,7 @@
+{
+  "name": "spooky",
+  "description": "Spooky mode: purple ghost vibe, wobbly mouth",
+  "body_classes": ["fx-spooky"],
+  "face_color": "#5d3a91",
+  "duration_s": 300
+}
