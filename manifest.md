@@ -28,3 +28,16 @@ everything not listed here.
   `stt.engine: whisper_cpp` (whisper-cli is installed via brew).
 - **Why:** Hardware reality; the spec's own fallback covers it. On an Apple
   Silicon machine the mlx default works unchanged.
+
+## 3. Weather is trusted content — not behind the §6 firewall (June 2026)
+
+- **Spec said:** all content fetched from the web is untrusted data (§6), and
+  `get_weather` is a fetch.
+- **Now:** `get_weather` does NOT set `returns_untrusted`, so a weather check
+  followed by a household write in the same turn stays instant (Tier 1)
+  instead of escalating to a Telegram confirmation.
+- **Why:** David's call after feeling the friction ("check the weather and if
+  it'll rain add X to the list" demanded a phone tap). Open-Meteo returns
+  structured numbers from a fixed API, not attacker-controlled prose — the
+  injection surface the firewall exists for. Free-text web content
+  (`web_search`, `fetch_page`) remains untrusted and still escalates.

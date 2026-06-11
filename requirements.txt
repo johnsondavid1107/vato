@@ -1,4 +1,5 @@
 anthropic>=0.40
+openai>=1.40   # only used when brain.provider is openai_compat (Gemini etc.)
 python-dotenv>=1.0
 PyYAML>=6.0
 aiohttp>=3.9
@@ -8,5 +9,8 @@ pynput>=1.7
 openwakeword>=0.6
 onnxruntime>=1.20
 pvrecorder>=1.2
+APScheduler>=3.10
+caldav>=1.3
+python-telegram-bot>=21
 # Apple Silicon only — Intel Macs use the whisper.cpp fallback (stt.engine: whisper_cpp)
 mlx-whisper>=0.4; platform_machine == "arm64"

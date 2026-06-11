@@ -1,10 +1,20 @@
 # Copy this file to config.yaml and edit. config.yaml is gitignored (it holds
 # personal-but-not-secret values like your location). Secrets go in .env only.
 
-claude:
-  # "Default to current Sonnet-class" per spec §3. Swap for any current model id.
-  model: claude-sonnet-4-6
+# ── The brain (June 2026 cost pivot — see TODO.md "Pick the brain") ──────────
+brain:
+  # anthropic = Claude via the Anthropic SDK (needs ANTHROPIC_API_KEY).
+  # openai_compat = any OpenAI-compatible endpoint, picked by base_url below.
+  provider: anthropic
+  model: claude-haiku-4-5    # 3x cheaper than Sonnet, faster, same tool quality
   max_tokens: 1024
+  # openai_compat only — Gemini Flash (paid tier; no training on your data):
+  #   provider: openai_compat
+  #   model: gemini-2.5-flash
+  #   base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+  #   api_key_env: GEMINI_API_KEY      # name of the .env variable holding the key
+  base_url: ""
+  api_key_env: GEMINI_API_KEY
 
 wake:
   # openWakeWord model: a pretrained name (hey_jarvis, alexa, hey_mycroft,
@@ -69,6 +79,33 @@ quiet_hours:                     # sleeping face state + nightcap (spec §9)
   start: "21:00"
   end: "07:00"
 
-# ── Used by later milestones ─────────────────────────────────────────────────
-family_calendar_name: "Family"   # M3 — iCloud shared calendar name
-allowed_user_ids: []             # M4 — Telegram user ID allowlist (§5)
+# iCloud shared calendar that calendar_write targets (reads cover all visible
+# calendars). Needs ICLOUD_USERNAME / ICLOUD_APP_PASSWORD in .env — verify with:
+#   python -m integrations.caldav_icloud
+family_calendar_name: "Family"
+
+memory:
+  # SQLite file holding facts, conversation log, lists, game state (spec §10).
+  db_path: memory/vato.db
+
+websearch:                       # M5 — DuckDuckGo HTML (free, no key)
+  max_results: 5
+  timeout_seconds: 10
+
+# ── M4: Telegram (spec §5) ────────────────────────────────────────────────────
+# Needs TELEGRAM_BOT_TOKEN in .env (from @BotFather; also disable privacy mode
+# there: /setprivacy → Disable, so the bot sees normal group messages).
+# Collect the IDs below by running:  python -m integrations.telegram_bot
+# Telegram stays OFF until allowed_user_ids is non-empty.
+
+# Telegram user IDs of family members. Gates EVERYTHING: messages from anyone
+# else — including DMs to the bot — are silently ignored and audit-logged.
+allowed_user_ids: []
+#   - 123456789                  # e.g. David
+#   - 987654321                  # e.g. Mum
+
+telegram:
+  # The family group chat — where replies and Tier-3 Confirm/Refuse buttons go.
+  family_chat_id: 0
+  # How long a Tier-3 confirmation waits for a button tap before giving up.
+  confirm_timeout_seconds: 120
