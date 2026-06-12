@@ -3,36 +3,41 @@
 Living checklist of things only David can do, plus loose ends. Claude keeps
 this updated each session; check items off as you go.
 
+## Known issues — queued for Claude (not on David)
+
+- [x] **Wake-word required for every exchange** — FIXED June 11 (evening
+  session): conversation mode. After every reply Vato re-opens a listening
+  window (chime + listening face, no wake word) — 8 s normally, 20 s during
+  a game; silence falls back to wake-word mode; "go deaf" and the hotkey
+  still close it instantly. Knobs in `config.yaml: conversation:`
+  (`follow_up_seconds: 0` restores the old behaviour). Verified by direct
+  drive with stubs; give it a live spin next trivia night.
+
 ## Blocking — nothing talks until these exist
 
-- [ ] **Buy Anthropic API credits** — platform.claude.com → Plans & Billing.
-  Every live test of M1–M5 fails with a 400 "credit balance is too low"
-  until then. (Pending since the June 10 session.)
-  - While you're there: turn on **auto-reload** (reload $N when balance
-    drops below $X) and a **monthly spend limit / usage alert email** —
-    that's the real fix for "the butler must never go silent". Typical
-    household usage on Sonnet is rough cents per interaction (estimate in
-    the June 11 session notes); $25–50/month of credits should be plenty
-    to start.
-- [ ] **Generate the iCloud app-specific password** — appleid.apple.com →
-  Sign-In & Security → App-Specific Passwords (NOT your Apple ID password).
-  Put it in `.env` (`ICLOUD_USERNAME` / `ICLOUD_APP_PASSWORD`), check
-  `family_calendar_name` in config.yaml matches the shared calendar, then
-  verify: `python -m integrations.caldav_icloud` → must print "Self-test
-  passed".
+- [x] **Buy Anthropic API credits** — DONE June 11 (Vato is talking and
+  hosting trivia live).
+  - [ ] Still confirm in the console: **auto-reload** (reload $N when
+    balance drops below $X) and a **monthly spend limit / usage alert
+    email** — that's the real fix for "the butler must never go silent".
+- [x] **Generate the iCloud app-specific password** — DONE June 11. The
+  self-test prints "Self-test passed": connection, family calendar
+  ('Johnson Family'), event round-trip, and reminders all work. (The 500
+  error you hit was an iCloud VTODO-query quirk on our side — fixed.)
 
 ## M4 setup — Telegram (one-time, ~10 minutes)
 
-- [ ] **Create the bot**: message @BotFather on Telegram → `/newbot` → copy
-  the token into `.env` as `TELEGRAM_BOT_TOKEN`.
-- [ ] **Disable privacy mode** so the bot sees normal group messages (not
-  just commands): @BotFather → `/setprivacy` → your bot → **Disable**.
-- [ ] **Make the family group chat** and add the bot to it.
-- [ ] **Collect the IDs**: run `python -m integrations.telegram_bot` — it
-  prints the user ID and chat ID of every message it sees. Have each family
-  member send a message in the group; copy the user IDs into
-  `config.yaml: allowed_user_ids` and the group's chat ID into
-  `telegram.family_chat_id`.
+- [x] **Create the bot** — DONE June 11: @vatoButlerBot, token in `.env`.
+- [x] **Disable privacy mode** — DONE June 11 (verified: the bot sees
+  normal group messages, not just commands).
+- [x] **Make the family group chat** and add the bot to it — DONE June 11.
+- [x] **Collect the IDs** — David's user ID and the group chat ID are in
+  config.yaml (June 11). **Each other family member still needs adding**:
+  re-run `python -m integrations.telegram_bot`, have them message the
+  group, append their user_id to `config.yaml: allowed_user_ids`. Until
+  then Vato silently ignores them on Telegram (by design).
+- [ ] **Restart the daemon** — Telegram only starts at boot; the log should
+  say the channel is up as @vatoButlerBot. Then message the group to test.
 - [ ] First `send_imessage` test will trigger a macOS automation prompt
   (Terminal wants to control Messages) — click Allow.
 
@@ -49,6 +54,9 @@ this updated each session; check items off as you go.
 - [ ] M5 (run.md): plant an instruction in a web page and ask Vato to read
   it → any write that turn needs a Telegram confirmation; "erase the disk"
   → in-character refusal; file ops stay inside ~/VatoWorkspace.
+- [ ] M6 (run.md): "host a trivia round" → questions + starred scoreboard
+  on the info panel, face in its host corner, all-time totals survive a
+  restart. **Passing this completes Phase 0.**
 
 ## Decisions parked with David
 
@@ -64,6 +72,13 @@ this updated each session; check items off as you go.
     data), put it in `.env` as `GEMINI_API_KEY`, flip the `brain:` section
     per run.md "Switching the brain", restart, compare.
   - [ ] Then decide which stays the daily driver.
+
+## After Phase 0 passes — don't forget
+
+- [ ] **Kids' entertainment expansion** — David wants lots more games &
+  activities (scavenger hunts, magic tricks, etc.). The full idea bank,
+  tiered by build cost, is in **`KIDS_IDEAS.md`**. Quick win owed first:
+  the "robot face" effect (in the spec, never drawn).
 
 ## Nice-to-have / later
 

@@ -1,4 +1,4 @@
-# Running Vato (M1–M5) — quick reference
+# Running Vato (M1–M6) — quick reference
 
 1. **Secrets** — `cp .env.example .env`, then fill in the one required key:
    - `ANTHROPIC_API_KEY` — from platform.claude.com
@@ -45,6 +45,12 @@ thing to compare, not prose quality.
    "Hey Jarvis… what's the weather?" — face goes listening → thinking → talking while Daniel
    answers in character. For a real "Vato" wake word later: train a custom model with
    openWakeWord's free Colab notebook and set `wake.model` to the `.onnx` path.
+7. **Conversation mode** — after the answer, the chime sounds again and the
+   face stays in *listening*: just ask the follow-up, no wake word ("And
+   tomorrow?"). Stay silent ~8 s and it returns to wake-word mode. During a
+   game the window is 20 s. Tune in `config.yaml: conversation:`
+   (`follow_up_seconds: 0` disables it); "go deaf" / ⌘⇧M still cut the mic
+   instantly, follow-up window or not.
 
 ## M2 acceptance walkthrough (Face v1)
 
@@ -187,3 +193,29 @@ All three acceptance criteria were verified offline by direct drive
   refused (path escapes the workspace).
 - **Web search (Tier 0, works without any of this)**: "Hey Jarvis, search
   the web for tonight's game time."
+
+## M6 acceptance walkthrough (Games night)
+
+Acceptance (spec §13): Vato hosts a full trivia round with scoreboard, in
+character. Needs API credits; everything else ships ready.
+
+- "Hey Jarvis, host a trivia round" → Vato asks who's playing → the face
+  slides to its bottom-right host corner and the **info panel** shows the
+  scoreboard → each question renders large (with lettered options) while
+  Vato reads it aloud → answer by voice → points awarded update the starred
+  scoreboard → "end the game" banks scores into the **all-time family
+  totals** (SQLite `game_state`, survives restarts) → "thanks, Vato" clears
+  the panel and the face returns full-screen.
+- Word games / twenty questions / story mode use the same flow.
+- "Help me think through <some idea>" → pros/cons/devil's-advocate board on
+  the panel (idea_session).
+- The panel auto-clears after 3 minutes of neglect (spec §9 timeout).
+
+No-API checks: panel UI — click the face window, press **p** (sample trivia
+panel + scoreboard; **P** clears), or open
+`http://127.0.0.1:8765/?panel=demo`. Game logic — direct-drive verified
+(start/show/award/end, all-time persistence across restarts).
+
+After M6 passes live: **Phase 0 definition of done** = all six milestones on
+the MacBook + garage TV rig. Then: KIDS_IDEAS.md is the entertainment
+backlog David wants next.

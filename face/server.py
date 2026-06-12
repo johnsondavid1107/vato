@@ -5,6 +5,9 @@ set_state(), which marshals onto the asyncio loop.
 M2 surface: kid effects (loaded from face/effects/*.json), weather wardrobe
 overlays, the back-panel task ticker, quiet-hours sleeping, and an amplitude
 envelope for talking mouth sync.
+M6: the info panel (spec §9) — the face shrinks to a corner "host" position
+while structured content (trivia question, scoreboard, brainstorm board)
+renders large; returns to full-face after a timeout or on clear.
 """
 
 import asyncio
@@ -21,6 +24,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 EFFECTS_DIR = Path(__file__).parent / "effects"
 
 DEFAULT_EFFECT_SECONDS = 300  # spec §9: kid effects melt back after 5 minutes
+DEFAULT_PANEL_SECONDS = 180   # spec §9: info panel returns to full-face after a timeout
 TICKER_KEEP = 30              # recent ticker lines replayed to reconnecting TVs
 
 
@@ -49,6 +53,8 @@ class FaceServer:
         self._wardrobe: list[str] = []
         self._effect: dict | None = None
         self._effect_expires = 0.0
+        self._panel: dict | None = None
+        self._panel_expires = 0.0
         self._ticker: list[str] = []
         self._loop: asyncio.AbstractEventLoop | None = None
 
@@ -117,6 +123,27 @@ class FaceServer:
         self._send({"type": "effect", "effect": effect})
         return f"Effect {name!r} applied; it melts back after {round(seconds / 60)} minute(s)."
 
+    def set_panel(self, title: str | None = None, lines: list[str] | None = None,
+                  footer: str | None = None,
+                  duration_s: float | None = None) -> None:
+        """Show the info panel (spec §9): face shrinks to its corner host
+        position, content renders large. Call clear_panel() (or let the
+        timeout pass) to return to the full face."""
+        seconds = float(duration_s or DEFAULT_PANEL_SECONDS)
+        self._panel = {
+            "title": title or "",
+            "lines": list(lines or []),
+            "footer": footer or "",
+            "duration_s": seconds,
+        }
+        self._panel_expires = time.monotonic() + seconds
+        self._send({"type": "panel", "panel": self._panel})
+
+    def clear_panel(self) -> None:
+        """Back to the full face ('thanks, Vato')."""
+        self._panel = None
+        self._send({"type": "panel", "panel": None})
+
     def ticker(self, text: str) -> None:
         """Back-panel task ticker line, plain language (spec §9)."""
         self._ticker.append(text)
@@ -160,6 +187,14 @@ class FaceServer:
                 await ws.send_str(json.dumps({"type": "effect", "effect": effect}))
             else:
                 self._effect = None
+        if self._panel is not None:
+            remaining = self._panel_expires - time.monotonic()
+            if remaining > 0:
+                panel = dict(self._panel)
+                panel["duration_s"] = remaining
+                await ws.send_str(json.dumps({"type": "panel", "panel": panel}))
+            else:
+                self._panel = None
         for line in self._ticker:
             await ws.send_str(json.dumps({"type": "ticker", "text": line, "replay": True}))
         await ws.send_str(json.dumps({"type": "state", **self._state}))

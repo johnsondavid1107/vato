@@ -149,6 +149,33 @@ function dropBit() {
   return el;
 }
 
+// ── Info panel (spec §9, M6) ────────────────────────────────────────────────
+// The face shrinks to its corner host position while content renders large.
+
+let panelTimer = null;
+
+function applyPanel(panel) {
+  if (panelTimer) clearTimeout(panelTimer);
+  panelTimer = null;
+  if (!panel) {
+    document.body.classList.remove("panel-on");
+    return;
+  }
+  document.getElementById("panel-title").textContent = panel.title || "";
+  const lines = document.getElementById("panel-lines");
+  lines.replaceChildren();
+  for (const text of panel.lines || []) {
+    const line = document.createElement("div");
+    line.className = "panel-line";
+    line.textContent = text;
+    lines.appendChild(line);
+  }
+  document.getElementById("panel-footer").textContent = panel.footer || "";
+  document.body.classList.add("panel-on");
+  // return to the full face after the timeout (server re-syncs on reconnect)
+  panelTimer = setTimeout(() => applyPanel(null), (panel.duration_s || 180) * 1000);
+}
+
 // ── Back-panel ticker ───────────────────────────────────────────────────────
 
 function tickerLine(text) {
@@ -181,6 +208,8 @@ function connect() {
       if (!qs.has("effect")) applyEffect(msg.effect);
     } else if (msg.type === "wardrobe") {
       if (!qs.has("wardrobe")) applyWardrobe(msg.items);
+    } else if (msg.type === "panel") {
+      if (!qs.has("panel")) applyPanel(msg.panel);
     } else if (msg.type === "ticker") {
       tickerLine(msg.text);
     }
@@ -228,13 +257,30 @@ document.addEventListener("keydown", (ev) => {
   else if (ev.key === "w") applyWardrobe(WARDROBE_DEMOS[demoWardrobe++ % WARDROBE_DEMOS.length]);
   else if (ev.key === "W") applyWardrobe([]);
   else if (ev.key === "t") tickerLine("Checking the weather for the household…");
+  else if (ev.key === "p") applyPanel(DEMO_PANEL);
+  else if (ev.key === "P") applyPanel(null);
 });
+
+const DEMO_PANEL = {
+  title: "Family Trivia — Round 2",
+  lines: [
+    "Q4: Which planet has the most moons?",
+    "A) Earth   B) Saturn   C) Mars",
+    "",
+    "★★★  Leo — 3",
+    "★★   Maya — 2",
+    "★    Dad — 1",
+  ],
+  footer: "Say your answer after the chime…",
+  duration_s: 120,
+};
 
 // Same demos as URL params, e.g. /?demo=working&effect=party&wardrobe=knit-hat,snow
 const qs = new URLSearchParams(location.search);
 window.addEventListener("load", () => setTimeout(() => {
   // small delay so the demo look wins over the initial WS state sync
   if (qs.has("demo")) setState(qs.get("demo"));
+  if (qs.has("panel")) applyPanel(DEMO_PANEL);
   if (qs.has("wardrobe")) applyWardrobe(qs.get("wardrobe").split(",").filter(Boolean));
   if (qs.has("effect")) {
     // effects arrive with the config message; retry briefly until they have

@@ -515,3 +515,64 @@ body.state-error .teeth { height: 0; }
   from { transform: translateY(100%); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
+
+/* ── Info panel (spec §9, M6) ──────────────────────────────────────────────
+   body.panel-on: the face shrinks into its bottom-right "host" corner and
+   the panel renders large on the left. */
+
+#face { transition: transform .6s cubic-bezier(.55, 0, .25, 1); }
+
+body.panel-on #face {
+  animation: none;                 /* breathe's transform would fight the shrink */
+  transform: scale(.32);
+  transform-origin: 92% 96%;
+}
+
+#panel {
+  position: absolute;
+  top: 7vh;
+  left: 5vw;
+  bottom: 7vh;
+  width: 62vw;
+  padding: 4.5vh 3.5vw;
+  background: rgba(255, 255, 255, .94);
+  border: .6vmin solid var(--ink);
+  border-radius: 3.5vmin;
+  box-shadow: 1.2vmin 1.6vmin 0 rgba(20, 22, 28, .35);
+  color: var(--ink);
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(4vh);
+  pointer-events: none;
+  transition: opacity .45s ease, transform .45s cubic-bezier(.55, 0, .25, 1);
+}
+body.panel-on #panel { opacity: 1; transform: translateY(0); }
+
+#panel-title {
+  font-size: 5.2vmin;
+  font-weight: 800;
+  letter-spacing: .1vmin;
+  padding-bottom: 2.2vh;
+  border-bottom: .45vmin solid var(--ink);
+  margin-bottom: 2.6vh;
+}
+
+#panel-lines {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+.panel-line { font-size: 4.2vmin; font-weight: 600; line-height: 1.25; }
+.panel-line:empty { min-height: 1.2vh; }
+
+#panel-footer {
+  margin-top: 2.2vh;
+  font-size: 3vmin;
+  font-weight: 600;
+  font-style: italic;
+  opacity: .55;
+}

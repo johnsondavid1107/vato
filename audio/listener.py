@@ -95,12 +95,16 @@ class VoiceListener:
                 self._oww.reset()
                 return
 
-    def record_command(self) -> np.ndarray | None:
+    def record_command(self, max_wait: float | None = None) -> np.ndarray | None:
         """Record until silence. Returns int16 PCM at 16 kHz, or None if no
-        speech was heard (or mute was hit mid-recording)."""
+        speech was heard (or mute was hit mid-recording).
+
+        max_wait overrides vad.max_wait_for_speech — the conversation-mode
+        follow-up window passes its own (usually longer) patience here."""
         threshold = float(self._vad.get("silence_threshold", 300))
         silence_duration = float(self._vad.get("silence_duration", 1.2))
-        max_wait = float(self._vad.get("max_wait_for_speech", 6))
+        if max_wait is None:
+            max_wait = float(self._vad.get("max_wait_for_speech", 6))
         max_seconds = float(self._vad.get("max_command_seconds", 12))
 
         self.resume()

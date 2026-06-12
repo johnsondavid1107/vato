@@ -14,6 +14,7 @@ import datetime
 import logging
 import os
 import threading
+import time
 
 import caldav
 
@@ -48,6 +49,14 @@ def _fmt_dt(value) -> str:
     return str(value)
 
 
+def _cal_name(cal: caldav.Calendar) -> str:
+    """Display name without the deprecated .name property."""
+    try:
+        return str(cal.get_display_name() or "")
+    except Exception:
+        return ""
+
+
 class ICloudCalendarService:
     def __init__(self, cfg: dict):
         self._family_name = (cfg.get("family_calendar_name") or "Family").strip()
@@ -79,9 +88,9 @@ class ICloudCalendarService:
         want = self._family_name.lower()
         cals = self.calendars()
         for cal in cals:
-            if (cal.name or "").strip().lower() == want:
+            if _cal_name(cal).strip().lower() == want:
                 return cal
-        names = ", ".join(repr(c.name) for c in cals) or "none visible"
+        names = ", ".join(repr(_cal_name(c)) for c in cals) or "none visible"
         raise RuntimeError(
             f"No calendar named {self._family_name!r} on this iCloud account "
             f"(visible calendars: {names}). Set family_calendar_name in "
@@ -106,7 +115,7 @@ class ICloudCalendarService:
 
         if calendar:
             cals = [c for c in self.calendars()
-                    if calendar.strip().lower() in (c.name or "").lower()]
+                    if calendar.strip().lower() in _cal_name(c).lower()]
             if not cals:
                 return f"No calendar matching {calendar!r} is visible."
         else:
@@ -117,7 +126,7 @@ class ICloudCalendarService:
             try:
                 hits = cal.search(start=start, end=end, event=True, expand=True)
             except Exception as exc:  # some iCloud collections 500 on REPORT
-                log.warning("search failed on %r: %s", cal.name, exc)
+                log.warning("search failed on %r: %s", _cal_name(cal), exc)
                 continue
             for ev in hits:
                 comp = ev.icalendar_component
@@ -125,7 +134,7 @@ class ICloudCalendarService:
                 found.append((
                     dtstart.dt if dtstart is not None else start,
                     f"{_fmt_dt(dtstart.dt) if dtstart is not None else '?'} — "
-                    f"{comp.get('SUMMARY', 'untitled')} [{cal.name}]",
+                    f"{comp.get('SUMMARY', 'untitled')} [{_cal_name(cal)}]",
                 ))
 
         def sort_key(pair):
@@ -163,16 +172,34 @@ class ICloudCalendarService:
             kwargs["dtend"] = dtend
             when = dtstart.strftime("%A %b %-d at %H:%M")
         cal.save_event(**kwargs)
-        return f"Created event {title!r} on the {cal.name} calendar, {when}."
+        return f"Created event {title!r} on the {_cal_name(cal)} calendar, {when}."
+
+    @staticmethod
+    def _pending_todos(cal: caldav.Calendar) -> list:
+        """iCloud returns 500 on the library's todos() REPORT shape;
+        search(todo=True) is the query it accepts (verified June 2026).
+        Completed/cancelled items are filtered client-side either way."""
+        try:
+            items = cal.search(todo=True)
+        except Exception:
+            items = cal.todos()  # non-iCloud servers
+        pending = []
+        for todo in items:
+            comp = todo.icalendar_component
+            status = str(comp.get("STATUS", "")).upper()
+            if status in ("COMPLETED", "CANCELLED") or comp.get("COMPLETED"):
+                continue
+            pending.append(todo)
+        return pending
 
     def reminders_read(self) -> str:
         lines = []
         for cal in self._todo_calendars():
-            for todo in cal.todos():  # pending only, by default
+            for todo in self._pending_todos(cal):
                 comp = todo.icalendar_component
                 due = comp.get("DUE")
                 due_txt = f" (due {_fmt_dt(due.dt)})" if due is not None else ""
-                lines.append(f"{comp.get('SUMMARY', 'untitled')}{due_txt} [{cal.name}]")
+                lines.append(f"{comp.get('SUMMARY', 'untitled')}{due_txt} [{_cal_name(cal)}]")
         if not lines:
             return "No pending reminders."
         return "Pending reminders:\n" + "\n".join(lines[:30])
@@ -184,18 +211,18 @@ class ICloudCalendarService:
         if list:
             want = list.strip().lower()
             for cal in cals:
-                if want in (cal.name or "").lower():
+                if want in _cal_name(cal).lower():
                     target = cal
                     break
             else:
-                names = ", ".join(repr(c.name) for c in cals)
+                names = ", ".join(repr(_cal_name(c)) for c in cals)
                 return f"No reminder list matching {list!r} (lists: {names})."
         kwargs: dict = {"summary": title}
         if due:
             kwargs["due"] = _parse_dt(due)
         target.save_todo(**kwargs)
         due_txt = f", due {kwargs['due'].strftime('%A %b %-d %H:%M')}" if due else ""
-        return f"Added reminder {title!r} to {target.name}{due_txt}."
+        return f"Added reminder {title!r} to {_cal_name(target)}{due_txt}."
 
 
 CALENDAR_READ_SCHEMA = {
@@ -281,7 +308,7 @@ def _selftest() -> int:
     print(f"   OK — {len(cals)} collections visible:")
     for cal in cals:
         comps = ",".join(cal.get_supported_components() or [])
-        print(f"   - {cal.name!r} ({comps})")
+        print(f"   - {_cal_name(cal)!r} ({comps})")
 
     print(f"2) Looking for the family calendar "
           f"({cfg.get('family_calendar_name', 'Family')!r})…")
@@ -290,7 +317,7 @@ def _selftest() -> int:
     except RuntimeError as exc:
         print(f"   FAIL: {exc}")
         return 1
-    print(f"   OK — {family.name!r}")
+    print(f"   OK — {_cal_name(family)!r}")
 
     print("3) Round-tripping a test event (create → read → delete)…")
     stamp = datetime.datetime.now().strftime("%H%M%S")
@@ -304,20 +331,32 @@ def _selftest() -> int:
         print("   FAIL: created event did not come back in calendar_read")
         return 1
     print("   OK — event visible via calendar_read")
-    for ev in family.search(start=tomorrow_noon - datetime.timedelta(hours=1),
-                            end=tomorrow_noon + datetime.timedelta(hours=2),
-                            event=True):
-        if str(ev.icalendar_component.get("SUMMARY", "")) == title:
-            ev.delete()
-            print("   OK — test event deleted")
+    # Wide search window: iCloud can lag indexing a just-created event into
+    # narrow time-range REPORTs (a tight window left strays behind once).
+    deleted = False
+    for attempt in range(2):
+        for ev in family.search(
+                start=tomorrow_noon - datetime.timedelta(days=1),
+                end=tomorrow_noon + datetime.timedelta(days=1), event=True):
+            if str(ev.icalendar_component.get("SUMMARY", "")) == title:
+                ev.delete()
+                deleted = True
+                print("   OK — test event deleted")
+                break
+        if deleted:
             break
+        time.sleep(2)
+    if not deleted:
+        print(f"   WARNING: could not find {title!r} to delete — "
+              "remove it from the calendar by hand.")
 
     print("4) Reminders (VTODO)…")
     try:
         print("   " + svc.reminders_read().splitlines()[0])
         print("   OK")
-    except RuntimeError as exc:
-        print(f"   note: {exc} (reminders optional; calendar still passes)")
+    except Exception as exc:
+        print(f"   FAIL: {type(exc).__name__}: {exc}")
+        return 1
 
     print("\nSelf-test passed — M3 calendar acceptance can run.")
     return 0

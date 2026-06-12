@@ -14,6 +14,12 @@ untrusted-content escalation, and send_imessage (Tier 3, always confirmed).
 M5: security — web_search/fetch_page (Tier 0, untrusted → escalation),
 workspace files + run_shell (Tier 2, jailed), and the §6 hard denylist
 enforced mechanically inside SystemControl.
+M6: games night — game_host (LLM is quizmaster, tool keeps scores +
+persistent family totals), idea_session, and the spec §9 info panel
+(face shrinks to its host corner while content renders large).
+Conversation mode (June 2026, David's field request): after each reply a
+follow-up listening window opens (chime + listening face, no wake word);
+silence falls back to wake-word mode. config.yaml `conversation:`.
 """
 
 import asyncio
@@ -31,6 +37,9 @@ from brain.client import Brain, brain_config
 from core.announce import Announcer
 from core.audit import AuditLog
 from core.config import ROOT, load_config, require_env
+from core.games import (
+    GAME_HOST_SCHEMA, GameHost, IDEA_SESSION_SCHEMA, make_idea_session,
+)
 from core.scheduler import (
     ANNOUNCE_AT_SCHEMA, TIMER_CANCEL_SCHEMA, TIMER_SET_SCHEMA, VatoScheduler,
 )
@@ -72,7 +81,7 @@ def _build_router(cfg: dict, audit: AuditLog, weather: WeatherService,
                   calendar: ICloudCalendarService, scheduler: VatoScheduler,
                   mute: MuteState, imessage: IMessageService,
                   websearch: WebSearchService, workspace: WorkspaceTools,
-                  channel: str = "voice") -> ToolRouter:
+                  games: GameHost, channel: str = "voice") -> ToolRouter:
     router = ToolRouter(audit, channel=channel)
     router.register(Tool(
         name="get_weather",
@@ -321,6 +330,36 @@ def _build_router(cfg: dict, audit: AuditLog, weather: WeatherService,
         ticker_line=lambda args: f"Running: {args.get('command', '…')}",
     ))
 
+    # ── M6: games night + idea sessions (spec §11, §13) ──────────────────────
+    router.register(Tool(
+        name="game_host",
+        tier=0,
+        description=(
+            "Host games on the TV: trivia, twenty questions, word games, "
+            "story mode. YOU invent the questions/content and judge answers; "
+            "this tool keeps authoritative scores (persistent family "
+            "all-time totals) and renders the info panel. Start with the "
+            "players' names, 'show' each question/puzzle on screen, 'award' "
+            "points as they're won, 'end' to bank the scores."
+        ),
+        input_schema=GAME_HOST_SCHEMA,
+        fn=games.tool_game_host,
+        ticker_line=lambda args: f"Games night: {args.get('action', '…')}…",
+    ))
+    router.register(Tool(
+        name="idea_session",
+        tier=0,
+        description=(
+            "Display a structured brainstorm/validation board on the TV "
+            "(pros, cons including devil's-advocate points, optional next "
+            "steps) while you discuss an idea with the family."
+        ),
+        input_schema=IDEA_SESSION_SCHEMA,
+        fn=make_idea_session(face),
+        ticker_line=lambda args: (
+            f"Weighing up the idea: {args.get('title', '…')}…"),
+    ))
+
     # ── M4: outbound messages — Tier 3, ALWAYS confirmed (spec §6, §8) ───────
     router.register(Tool(
         name="send_imessage",
@@ -338,36 +377,56 @@ def _build_router(cfg: dict, audit: AuditLog, weather: WeatherService,
     return router
 
 
-def _voice_loop(listener: VoiceListener, transcriber: Transcriber, brain: Brain,
-                announcer: Announcer, face: FaceServer, mute: MuteState) -> None:
+def _voice_loop(cfg: dict, listener: VoiceListener, transcriber: Transcriber,
+                brain: Brain, announcer: Announcer, face: FaceServer,
+                mute: MuteState, games: GameHost) -> None:
+    conv = cfg.get("conversation") or {}
+    follow_up = float(conv.get("follow_up_seconds", 8))
+    in_game_follow_up = float(conv.get("in_game_follow_up_seconds", 20))
+
     log.info('Voice loop ready — say "%s".', listener.wake_phrase)
     while True:
         try:
             listener.wait_for_wake()
             log.info("Wake word detected")
-            face.set_state("listening")
-            _chime()
 
-            pcm = listener.record_command()
-            if pcm is None:
-                log.info("No speech heard; back to idle")
-                face.set_state("muted" if mute.is_muted else "idle")
-                continue
+            # Conversation mode: after the wake word opens an exchange, each
+            # reply re-opens a follow-up listening window (chime + listening
+            # face, no wake word needed) until silence or mute ends it.
+            follow_on = False
+            while True:
+                face.set_state("listening")
+                _chime()
 
-            face.set_state("thinking")
-            listener.pause()  # don't capture while transcribing/replying
-            transcript = transcriber.transcribe(pcm)
-            if not transcript:
-                face.set_state("idle")
-                continue
-            log.info("Heard: %s", transcript)
+                window = ((in_game_follow_up if games.active else follow_up)
+                          if follow_on else None)
+                pcm = listener.record_command(max_wait=window)
+                if pcm is None:
+                    log.info("No speech heard; back to wake-word mode")
+                    face.set_state("muted" if mute.is_muted else "idle")
+                    break
 
-            reply = brain.respond(transcript)
-            log.info("Vato: %s", reply)
+                face.set_state("thinking")
+                listener.pause()  # don't capture while transcribing/replying
+                transcript = transcriber.transcribe(pcm)
+                if not transcript:
+                    face.set_state("idle")
+                    break
+                log.info("Heard: %s", transcript)
 
-            # One mouth for replies and scheduled alerts alike — a timer
-            # going off mid-reply queues behind the announcer's lock.
-            announcer.say(reply)
+                reply = brain.respond(transcript)
+                log.info("Vato: %s", reply)
+
+                # One mouth for replies and scheduled alerts alike — a timer
+                # going off mid-reply queues behind the announcer's lock.
+                announcer.say(reply)
+
+                # follow_up_seconds: 0 restores wake-word-every-turn; a
+                # mid-turn "go deaf" must not leave the mic open either.
+                if (in_game_follow_up if games.active else follow_up) <= 0 \
+                        or mute.is_muted:
+                    break
+                follow_on = True
 
         except Exception:
             log.exception("Interaction failed")
@@ -483,16 +542,17 @@ def main() -> None:
     imessage = IMessageService(system)
     websearch = WebSearchService(cfg)
     workspace = WorkspaceTools(system)
+    games = GameHost(memory, face)  # shared: one game at a time, household-wide
 
     # Same tools, one router per channel so audit entries and the §6
     # untrusted-content flag stay per-conversation (spec §4: identical brain
     # and permission layer for voice and Telegram).
     router = _build_router(cfg, audit, weather, face, memory, calendar,
                            scheduler, mute, imessage, websearch, workspace,
-                           channel="voice")
+                           games, channel="voice")
     tg_router = _build_router(cfg, audit, weather, face, memory, calendar,
                               scheduler, mute, imessage, websearch, workspace,
-                              channel="telegram")
+                              games, channel="telegram")
 
     # Tier 2/3 audit entries scroll across the back-panel ticker (spec §6).
     audit.on_record = lambda e: face.ticker(
@@ -500,11 +560,12 @@ def main() -> None:
     ) if e["tier"] >= 2 else None
 
     # Tool calls flip the face to the engine room with a plain-language line
-    # (spec §4 step 4, §9) — except face effects and going deaf, which
-    # belong on the front.
+    # (spec §4 step 4, §9) — except the front-of-house tools: face effects,
+    # going deaf, and game/idea hosting (flipping mid-game would be rude).
     def on_tool(name: str, args: dict) -> None:
         face.ticker(router.describe_call(name, args))
-        if name not in ("set_face_effect", "go_deaf"):
+        if name not in ("set_face_effect", "go_deaf", "game_host",
+                        "idea_session"):
             face.set_state("working")
 
     brain = Brain(cfg, router, on_tool=on_tool, memory=memory)
@@ -537,7 +598,7 @@ def main() -> None:
 
     voice_thread = threading.Thread(
         target=_voice_loop,
-        args=(listener, transcriber, brain, announcer, face, mute),
+        args=(cfg, listener, transcriber, brain, announcer, face, mute, games),
         daemon=True,
         name="voice-loop",
     )

@@ -21,3 +21,7 @@ memory/*.db
 
 # claude stuff
 VATO_SPEC.md
+
+TODO.md
+COMMANDS.md
+config.yaml.example

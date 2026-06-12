@@ -38,6 +38,15 @@ vad:
   # Hard cap on command length.
   max_command_seconds: 12
 
+conversation:
+  # After Vato finishes a reply, it keeps listening this many seconds for a
+  # follow-up — no wake word needed (chime + listening face show the window
+  # is open). Silence hands control back to the wake word. 0 = old behaviour
+  # (wake word before every exchange).
+  follow_up_seconds: 8
+  # A longer window while a game is running — families deliberate answers.
+  in_game_follow_up_seconds: 20
+
 stt:
   # mlx (Apple Silicon, default) | whisper_cpp (fallback)
   engine: mlx

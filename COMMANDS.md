@@ -24,6 +24,11 @@ Telegram group.
 | Telegram | Message the family group chat | 🔑 bot + allowlist setup |
 | TV face | Always on; flips to the engine room while working | ✅ |
 
+**Conversation mode** ✅ — after Vato answers, just keep talking: you hear
+the chime and see the listening face, and for ~8 seconds (20 during a game)
+no wake word is needed. Stay silent and Vato goes back to waiting for
+"Hey Jarvis". Tune or disable it in `config.yaml: conversation:`.
+
 ## Questions & conversation — T0
 
 - "What's the capital of Peru?" / "Explain rainbows to a six-year-old"
@@ -71,6 +76,22 @@ Telegram group.
 - Discretion: Vato shares *facts and preferences* freely but won't report
   what individual family members said or asked — except to that person
   themselves, or to parents for a child's genuine safety concern.
+
+## Games & fun — T0 ✅ (🔑 API credits)
+
+- "Host a trivia round!" — Vato asks who's playing, puts each question and
+  the live scoreboard on the TV (the face slides into its corner host spot),
+  judges answers, and keeps **all-time family point totals** between nights.
+- "Let's play twenty questions" · "Word game!" (rhymes, spelling, word
+  chains) · "Tell us a story" (story mode, choices on screen)
+- "Thanks, Vato" — scoreboard away, face comes back full-screen.
+- A much bigger kids' entertainment menu (scavenger hunts, magic tricks,
+  hide-and-seek referee…) is planned — see `KIDS_IDEAS.md`.
+
+## Brainstorming (for the adults) — T0 ✅
+
+- "Help me think through opening a food truck" — honest pros, cons, and
+  devil's-advocate points, rendered as a board on the TV while you talk.
 
 ## Kid commands (the face) — T0 ✅ · melt back after 5 minutes
 
@@ -120,13 +141,11 @@ These are enforced in code beneath the AI — no phrasing gets around them.
 
 ## Future commands (spec'd, not yet built)
 
-**M6 — Games night (next milestone)**
-- "Host a trivia round" — questions + scoreboard on the TV, running family
-  scores kept between nights
-- "Let's play twenty questions" · word games · "Tell us a story" (story mode)
-- "Help me brainstorm…" (idea session: pros/cons, devil's advocate)
-- Info panel: face shrinks to a corner and content (scoreboard, calendar,
-  lists) renders large; "Thanks, Vato" brings the face back.
+**Kids' entertainment expansion (after live acceptance)** — the full menu
+lives in `KIDS_IDEAS.md`: scavenger hunts, treasure hunts with riddle clues,
+magic tricks, hide-and-seek referee, Vato Says, fortune teller, staring
+contests, spelling/times-tables trainers, choose-your-own-adventure
+bedtime stories, Mad Libs, drawing-prompt contests, daily surprise slot…
 
 **Phase 2 — expansions**
 - "Turn off the living-room lights" (Home Assistant: lights, plugs,
